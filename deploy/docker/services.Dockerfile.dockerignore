@@ -1,0 +1,28 @@
+# Ignore rules for deploy/docker/services.Dockerfile (BuildKit reads <Dockerfile>.dockerignore).
+# Secrets never enter the build context: .env* and .data (keys, deployment facts) are excluded.
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/*.log
+**/.DS_Store
+**/tsconfig.tsbuildinfo
+.git
+.data
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Not part of the service images. Workspace manifests stay (the frozen lockfile checks them).
+apps/**
+!apps/*/package.json
+e2e/**
+!e2e/package.json
+contracts/**
+!contracts/funds/res/*.wasm
+submission
+reviews
+docs
+deploy

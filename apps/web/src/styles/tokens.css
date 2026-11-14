@@ -1,0 +1,132 @@
+:root {
+
+  --paper: #ffffff;
+  --canvas: #f6f7fb;
+  --ink: #0f1117;
+  --brand: #2b44d9;
+  --gold: #b4822f;
+  --up: #0a7d53;
+  --down: #d42a3c;
+  --candle-up: #12b886;
+  --candle-down: #f0465a;
+
+  --lime: #e6f05a;
+  --lavender: #c3b3f3;
+  --mint: #a8f3dd;
+  --pink: #f4b6cf;
+  --sky: #bfd9ff;
+
+  --viz-cobalt: #2b44d9;
+  --viz-teal: #0e9f86;
+  --viz-gold: #b4822f;
+  --viz-plum: #7a5ae0;
+  --viz-clay: #d9487f;
+  --viz-slate: #5f6776;
+
+  --ink-2: color-mix(in oklab, var(--ink) 64%, transparent);
+  --ink-3: color-mix(in oklab, var(--ink) 48%, transparent);
+  --line: color-mix(in oklab, var(--ink) 8%, transparent);
+  --line-strong: color-mix(in oklab, var(--ink) 16%, transparent);
+  --fill: color-mix(in oklab, var(--ink) 4%, transparent);
+  --brand-soft: color-mix(in oklab, var(--brand) 10%, transparent);
+  --gold-soft: color-mix(in oklab, var(--gold) 14%, transparent);
+  --gold-text: color-mix(in oklab, var(--gold) 72%, var(--ink));
+  --up-soft: color-mix(in oklab, var(--candle-up) 14%, transparent);
+  --down-soft: color-mix(in oklab, var(--candle-down) 14%, transparent);
+
+  --e1: 0 0 0 1px var(--line), 0 1px 2px color-mix(in oklab, var(--ink) 6%, transparent);
+  --e2: 0 0 0 1px var(--line), 0 8px 24px -8px color-mix(in oklab, var(--ink) 12%, transparent);
+  --e3: 0 24px 64px -16px color-mix(in oklab, var(--ink) 22%, transparent);
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-micro: 120ms;
+  --dur: 200ms;
+  --dur-emph: 320ms;
+  --dur-chart: 600ms;
+
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-up: var(--up);
+  --color-up-soft: var(--up-soft);
+  --color-down: var(--down);
+  --color-down-soft: var(--down-soft);
+  --color-canvas: var(--canvas);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-text: var(--gold-text);
+  --color-candle-up: var(--candle-up);
+  --color-candle-down: var(--candle-down);
+  --color-lime: var(--lime);
+  --color-lavender: var(--lavender);
+  --color-mint: var(--mint);
+  --color-pink: var(--pink);
+  --color-sky: var(--sky);
+  --color-viz-cobalt: var(--viz-cobalt);
+  --color-viz-teal: var(--viz-teal);
+  --color-viz-gold: var(--viz-gold);
+  --color-viz-plum: var(--viz-plum);
+  --color-viz-clay: var(--viz-clay);
+  --color-viz-slate: var(--viz-slate);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fill: var(--fill);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+
+  --radius-chip: 6px;
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-sheet: 20px;
+
+  --shadow-e1: var(--e1);
+  --shadow-e2: var(--e2);
+  --shadow-e3: var(--e3);
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-title-sm: 18px;
+  --text-title-sm--line-height: 26px;
+  --text-title: 24px;
+  --text-title--line-height: 32px;
+  --text-display-sm: 32px;
+  --text-display-sm--line-height: 40px;
+  --text-display: 44px;
+  --text-display--line-height: 48px;
+  --text-hero-sm: 64px;
+  --text-hero-sm--line-height: 64px;
+  --text-hero-md: 88px;
+  --text-hero-md--line-height: 88px;
+  --text-hero: 120px;
+  --text-hero--line-height: 112px;
+
+  --breakpoint-sm: 390px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

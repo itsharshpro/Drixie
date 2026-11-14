@@ -1,0 +1,299 @@
+name: drixie
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "20m", max-file: "5" }
+
+x-service: &service
+  restart: unless-stopped
+  init: true
+  env_file: ../.env
+  networks: [drixie]
+  logging: *logging
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+x-build: &build
+  context: ..
+  dockerfile: deploy/docker/services.Dockerfile
+
+x-backend-env: &backend-env
+  NEAR_NETWORK: ${NEAR_NETWORK:-testnet}
+  DATABASE_URL: postgres://drixie:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/drixie
+  REDIS_URL: redis://redis:6379
+  API_URL: http://api:4000
+  AGENTS_URL: http://agents:4300
+  RELAYER_URL: http://relayer:4110
+  LISTED_REPO_ROOT: /app
+  NEAR_RPC_URL: http://rpc-signers:3031
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: drixie
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: drixie
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks: [drixie]
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+    shm_size: 128mb
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drixie -d drixie"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    networks: [drixie]
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    <<: *service
+    restart: "no"
+    build: { <<: *build, target: migrate }
+    image: drixie/migrate:latest
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  relayer:
+    <<: *service
+    build: { <<: *build, target: relayer }
+    image: drixie/relayer:latest
+    environment:
+      <<: *backend-env
+      RELAYER_HOST: 0.0.0.0
+      RELAYER_PORT: "4110"
+      RELAYER_TRUST_PROXY: "1" # Caddy sets X-Forwarded-For to the client IP (CF-Connecting-IP behind Cloudflare)
+      RELAYER_CORS_ORIGINS: ${RELAYER_CORS_ORIGINS:-${WEB_URL:?set WEB_URL in .env}}
+    volumes:
+      - ../.data:/app/.data:ro # deployment facts + keys/<network>/{relayer,players}.<root>.json
+    ports: ["127.0.0.1:4110:4110"]
+    depends_on:
+      redis: { condition: service_healthy }
+      rpc-signers: { condition: service_started }
+
+  api:
+    <<: *service
+    build: { <<: *build, target: api }
+    image: drixie/api:latest
+    environment:
+      <<: *backend-env
+      API_HOST: 0.0.0.0
+      API_PORT: "4000"
+      API_TRUST_PROXY: "1"
+      API_URL: https://${PUBLIC_HOST:?set PUBLIC_HOST in .env}
+      PUBLIC_RPC_URL: ${NEAR_RPC_URL:-https://rpc.testnet.fastnear.com}
+      RELAYER_URL: https://${PUBLIC_HOST}/relayer
+    extra_hosts:
+      - "${PUBLIC_HOST}:host-gateway"
+    volumes:
+      - ../.data:/app/.data:ro
+    tmpfs: [/tmp, "/app/.data/keys:ro,size=64k"]
+    ports: ["127.0.0.1:4000:4000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      relayer: { condition: service_healthy }
+
+  indexer:
+    <<: *service
+    build: { <<: *build, target: indexer }
+    image: drixie/indexer:latest
+    environment:
+      <<: *backend-env
+      INDEXER_HOST: 0.0.0.0
+      NEAR_RPC_URL: http://rpc-cache:3031
+    volumes:
+      - ../.data:/app/.data:ro
+    tmpfs: [/tmp, "/app/.data/keys:ro,size=64k"]
+    ports: ["127.0.0.1:4200:4200"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      rpc-cache: { condition: service_started }
+
+  rpc-cache: &rpc-proxy
+    image: node:22-alpine
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    command: ["node", "/srv/server.mjs"]
+    environment:
+      PORT: "3031"
+      RPC_STRATEGY: spread
+      RPC_UPSTREAMS: ${INDEXER_RPC_UPSTREAMS:-https://near-testnet.drpc.org=16}
+      NEARDATA_URL: ${INDEXER_NEARDATA_URL:-https://testnet.neardata.xyz}
+      NEARDATA_RPS: ${INDEXER_NEARDATA_RPS:-1}
+    volumes:
+      - ./rpc-cache/server.mjs:/srv/server.mjs:ro
+    networks: [drixie]
+    logging: *logging
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3031/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  rpc-signers:
+    <<: *rpc-proxy
+    environment:
+      PORT: "3031"
+      RPC_STRATEGY: ordered
+      RPC_UPSTREAMS: ${SIGNER_RPC_UPSTREAMS:-${NEAR_RPC_URL:-https://rpc.testnet.fastnear.com}=10,https://near-testnet.drpc.org=4}
+
+  world:
+    <<: *service
+    build: { <<: *build, target: world }
+    image: drixie/world:latest
+    environment:
+      <<: *backend-env
+      WORLD_HOST: 0.0.0.0
+      WORLD_PORT: "4500"
+    volumes:
+      - ../.data:/app/.data:ro
+    tmpfs: [/tmp, "/app/.data/keys:ro,size=64k"]
+    ports: ["127.0.0.1:4500:4500"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  nav:
+    <<: *service
+    build: { <<: *build, target: nav }
+    image: drixie/nav:latest
+    environment:
+      <<: *backend-env
+      NAV_HOST: 0.0.0.0
+      NAV_PORT: "4700"
+    volumes:
+      - ../.data:/app/.data
+      - ../.data/keys/${NEAR_NETWORK:-testnet}/dna:/app/.data/keys/${NEAR_NETWORK:-testnet}/dna:ro
+    ports: ["127.0.0.1:4700:4700"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      world: { condition: service_started }
+      rpc-signers: { condition: service_started }
+
+  agents:
+    <<: *service
+    build: { <<: *build, target: agents }
+    image: drixie/agents:latest
+    environment:
+      <<: *backend-env
+      AGENTS_PORT: "4300"
+    volumes:
+      - ../.data:/app/.data
+      - ../.data/keys/${NEAR_NETWORK:-testnet}/dna:/app/.data/keys/${NEAR_NETWORK:-testnet}/dna:ro
+    ports: ["127.0.0.1:4300:4300"]
+    depends_on:
+      api: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  desk:
+    <<: *service
+    build: { <<: *build, target: desk }
+    image: drixie/desk:latest
+    environment:
+      <<: *backend-env
+      DESK_HOST: 0.0.0.0
+      DESK_PORT: "4600"
+      DESK_LOG_FILE: "-"
+      DESK_KEYS_DIR: /app/house-keys
+      DESK_STATE_FILE: /app/desk-state/state.json
+    volumes:
+      - ../.data:/app/.data:ro
+      - ../.data/keys/${NEAR_NETWORK:-testnet}/house:/app/house-keys:ro
+      - ../.data/desk:/app/desk-state
+    tmpfs: [/tmp, "/app/.data/keys:ro,size=64k"]
+    ports: ["127.0.0.1:4600:4600"]
+    depends_on:
+      api: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  mcp:
+    <<: *service
+    build: { <<: *build, target: mcp }
+    image: drixie/mcp:latest
+    environment:
+      <<: *backend-env
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "4400"
+      MCP_TRUST_PROXY: "1"
+      MCP_PUBLIC_API_URL: https://${PUBLIC_HOST}
+    volumes:
+      - ../.data:/app/.data:ro
+    ports: ["127.0.0.1:4400:4400"]
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    restart: unless-stopped
+    init: true
+    build:
+      context: ..
+      dockerfile: deploy/docker/web.Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_URL: https://${PUBLIC_HOST}/v1
+        NEXT_PUBLIC_MCP_URL: https://${PUBLIC_HOST}/mcp
+        NEXT_PUBLIC_FUNDS_CONTRACT: ${LISTED_ROOT:?set LISTED_ROOT in .env}
+        NEXT_PUBLIC_PROTECT: ${NEXT_PUBLIC_PROTECT:-0}
+        NEXT_PUBLIC_GITHUB_URL: ${NEXT_PUBLIC_GITHUB_URL:-}
+        NEXT_PUBLIC_X_URL: ${NEXT_PUBLIC_X_URL:-}
+    image: drixie/web:latest
+    networks: [drixie]
+    logging: *logging
+    read_only: true
+    tmpfs: [/tmp, "/app/apps/web/.next/cache:uid=1000,gid=1000"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    extra_hosts:
+      - "${PUBLIC_HOST}:host-gateway"
+    ports: ["127.0.0.1:3000:3000"]
+
+  tools:
+    <<: *service
+    restart: "no"
+    profiles: ["tools"]
+    build: { <<: *build, target: tools }
+    image: drixie/tools:latest
+    env_file:
+      - path: ../.env
+      - path: ../.env.deployer
+        required: false
+    environment:
+      <<: *backend-env
+    volumes:
+      - ../.data:/app/.data
+
+volumes:
+  pg_data:
+  redis_data:
+
+networks:
+  drixie:
+    name: drixie

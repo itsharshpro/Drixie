@@ -1,0 +1,28 @@
+{
+  "name": "listed",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "dev": "node scripts/dev.mjs",
+    "dev:fresh": "node scripts/dev.mjs --fresh",
+    "e2e": "pnpm --filter @listed/e2e test",
+    "screens": "node scripts/screens.mjs",
+    "sandbox": "./scripts/sandbox.sh",
+    "deploy:local": "tsx scripts/deploy-local.ts",
+    "relayer": "pnpm --filter @listed/relayer start"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "concurrently": "^9.1.0"
+  }
+}

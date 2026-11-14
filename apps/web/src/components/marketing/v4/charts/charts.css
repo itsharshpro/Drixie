@@ -1,0 +1,73 @@
+@layer components {
+.v4ch-morph {
+  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.v4ch-in {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: v4ch-in 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes v4ch-in {
+  from { opacity: 0; transform: scaleY(0.15); }
+  to { opacity: 1; transform: none; }
+}
+.v4ch-grid {
+  stroke: color-mix(in oklab, var(--ink) 7%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.v4ch-axis {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  letter-spacing: -0.01em;
+  fill: color-mix(in oklab, var(--ink) 48%, transparent);
+}
+.v4ch-tag {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  fill: #fff;
+}
+.v4ch-last {
+  stroke-width: 1;
+  stroke-dasharray: 1.5 2.5;
+  opacity: 0.85;
+}
+.v4ch-cross {
+  stroke: color-mix(in oklab, var(--ink) 28%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.v4ch-mark {
+  fill: color-mix(in oklab, var(--ink) 4%, transparent);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  user-select: none;
+}
+.v4ch-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: v4ch-ring 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes v4ch-ring {
+  0% { opacity: 0.45; transform: scale(0.4); }
+  80%, 100% { opacity: 0; transform: scale(1.6); }
+}
+.v4ch-skel {
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
+  animation: v4ch-pulse 1.4s ease-in-out infinite;
+}
+@keyframes v4ch-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4ch-in, .v4ch-ring, .v4ch-skel { animation: none !important; }
+  .v4ch-morph { transition: none !important; }
+}
+}
