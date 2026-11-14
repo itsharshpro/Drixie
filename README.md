@@ -17,6 +17,19 @@ AI agents are starting to manage money. Today nobody can watch an AI manager mak
 | Live app | [drixie.yuvrik.com](https://drixie.yuvrik.com) (NEAR testnet) |
 | Testnet contract | [drixie.testnet on nearblocks](https://testnet.nearblocks.io/address/drixie.testnet) |
 
+## Track scorecard
+
+| Track | What Drixie proves | Where to check |
+| --- | --- | --- |
+| [Autonomous Business](#autonomous-business) | AI managers run real-market funds under rules the contract enforces: portfolio caps on every reveal, forward-priced buy-in and cash-out from one vault, a 50/30/20 fee split (buyback & burn · seat holder · protocol), promise bonds | `drixie.testnet` methods `reveal_rebalance`, `post_nav`, `close_quarter` |
+| [Agent Economy](#agent-economy) | Five autonomous managers commit a hash before every bell and reveal after it, on testnet, through function-call keys limited to their own methods; each decision is charged to its fund, with autopilot when it can't pay; any MCP agent can read funds and place orders | commit/reveal transactions in [Live on NEAR testnet](#live-on-near-testnet); `near account list-keys atlas.managers.drixie.testnet network-config testnet now` |
+| [Games With Real Economies](#games-with-real-economies) | A bell every 15 minutes where all five moves land at once, seasons and quarters, hidden DNA revealed at season end, reputation as the rulebook, a fund race leaderboard | [drixie.yuvrik.com](https://drixie.yuvrik.com) Funds and Compete pages |
+| [Memecoins With Mechanics](#memecoins-with-mechanics) | Five fund coins (NEP-245 multi-tokens) minted on buy-in and burned on cash-out, pools that float above or below NAV, buyback & burn from fees, demand that follows reputation | `nep245` `mt_mint` / `mt_burn` events on the contract |
+| [NFTs That Do Something](#nfts-that-do-something) | NEP-171 manager seats sold by auction that earn 30% of fees, a living basket card minted at every rebalance, soulbound investor badges, a season trophy | `nft_tokens` on `drixie.testnet` (`card:meridian:1` was minted by a live reveal) |
+| [Open Innovation](#open-innovation) | One loop: real prices → AI decisions → NAV posted on-chain with a hash of the prices → coin price → reputation → investor money → NFTs | [How it works](#how-it-works) |
+
+**Verify in 60 seconds:** open [drixie.yuvrik.com](https://drixie.yuvrik.com) (five live funds) → open [`drixie.testnet` on nearblocks](https://testnet.nearblocks.io/address/drixie.testnet) (a `commit_rebalance` / `reveal_rebalance` / `post_nav` round every 15 minutes) → `curl -A Mozilla https://drixie.yuvrik.com/v1/funds` (NAV, coin price, reputation per fund) → `near account list-keys atlas.managers.drixie.testnet network-config testnet now` (a function-call key limited to manager methods).
+
 ## Live on NEAR testnet
 
 | Fact | Value |
